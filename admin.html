@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AttendX - Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="container center-xy"
+        style="position: fixed; inset: 0; z-index: 50; background: var(--bg-color);">
+        <div class="glass-panel fade-in" style="width: 100%; max-width: 400px; padding: 2.5rem;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h2 class="text-gradient" style="font-size: 2rem;">Admin Access</h2>
+                <p style="color: #94a3b8;">Restricted Area</p>
+            </div>
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="admin-user" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="admin-pass" class="form-input" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Unlock System</button>
+                <div id="login-error" class="hidden status-message status-error">Invalid Credentials</div>
+            </form>
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <a href="index.html" style="color: #94a3b8; font-size: 0.875rem;">&larr; Back to Portal</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div id="dashboard" class="container hidden fade-in" style="padding-top: 2rem;">
+        <header class="glass-panel"
+            style="padding: 1.5rem 2rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div
+                    style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-family: var(--font-heading);">
+                    AX</div>
+                <div>
+                    <h2 style="font-size: 1.5rem;">Dashboard</h2>
+                    <div style="font-size: 0.875rem; color: #94a3b8;">Select a date to view reports</div>
+                </div>
+            </div>
+            <button onclick="logout()" class="btn btn-secondary" style="font-size: 0.875rem;">Log Out</button>
+        </header>
+
+        <!-- Search Section -->
+        <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
+            <div class="admin-header">
+                <h3>Find Scheduled Classes</h3>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                    <label class="form-label">Select Date</label>
+                    <input type="date" id="search-date" class="form-input">
+                </div>
+                <button onclick="searchClasses()" class="btn btn-primary" style="height: 50px;">Search Classes</button>
+            </div>
+        </div>
+
+        <!-- Section: Class List -->
+        <div id="class-list-section" class="hidden">
+            <h3 style="margin-bottom: 1rem; color: #94a3b8; font-size: 0.875rem; text-transform: uppercase;">Scheduled
+                Classes</h3>
+
+            <div id="classes-container" class="stats-grid"
+                style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+                <!-- Cards injected here -->
+            </div>
+            <div id="no-classes-msg" class="hidden" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                No classes found for this date.
+            </div>
+        </div>
+
+        <!-- Section: Detailed Report -->
+        <div id="report-view" class="glass-panel hidden fade-in" style="padding: 2rem; margin-top: 2rem;">
+            <div class="admin-header">
+                <div>
+                    <h3 id="report-title">Attendance Report</h3>
+                    <p id="report-subtitle" style="color: #94a3b8; font-size: 0.9rem;">--</p>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button onclick="exportCSV()" class="btn btn-secondary">Export to CSV</button>
+                    <button onclick="closeReport()" class="btn btn-secondary">Close</button>
+                </div>
+            </div>
+
+            <div id="report-loading" class="hidden" style="text-align: center; padding: 4rem;">
+                <div class="loader"></div>
+                <p style="margin-top: 1rem; color: #94a3b8;">Analyzing Attendance...</p>
+            </div>
+
+            <div id="report-table-container" style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>NIC</th>
+                            <th>Student Name</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-body">
+                        <!-- Rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="report-summary" style="margin-top: 1rem; text-align: right; color: #94a3b8; font-size: 0.9rem;">
+                <!-- Summary injected here -->
+            </div>
+        </div>
+
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+
+</html>

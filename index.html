@@ -1,131 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendance System</title>
-    <link rel="stylesheet" href="style.css">
+    <title>AttendX - Student Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
-    <div class="main-container">
-        <div class="header-section">
-            <h2>Student Attendance</h2>
-            <p>Enter your NIC to mark your attendance</p>
-        </div>
-
-        <div class="card-wrapper">
-            <div class="input-group">
-                <input type="text" id="nicInput" placeholder="Enter NIC Number" autocomplete="off">
-                <button class="primary-btn" onclick="searchStudent()">Search</button>
+    <div class="container center-xy">
+        <main class="glass-panel fade-in" style="width: 100%; max-width: 480px; padding: 3rem; position: relative; overflow: hidden;">
+            <!-- Decorative elements -->
+            <div style="position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: var(--primary-color); filter: blur(60px); opacity: 0.5;"></div>
+            
+            <div style="text-align: center; margin-bottom: 2.5rem;">
+                <h1 class="text-gradient" style="font-size: 3rem; margin-bottom: 0.5rem;">AttendX</h1>
+                <p style="color: #94a3b8;">Futuristic Attendance System</p>
             </div>
 
-            <div id="errorMessage" class="error-message"></div>
-
-            <div id="classCard" class="result-card">
-                <div class="student-info">
-                    <h3 id="displayStudentName"></h3>
+            <form id="attendance-form" onsubmit="handleAttendance(event)">
+                <div class="form-group">
+                    <label for="nic" class="form-label">National Identity Card (NIC)</label>
+                    <input type="text" id="nic" class="form-input" placeholder="Enter your NIC (e.g., 200012345V)" required autocomplete="off">
                 </div>
 
-                <div class="info-row">
-                    <span class="info-label">Class</span>
-                    <span class="info-value" id="displayClassName"></span>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
+                        <span>Mark Attendance</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
                 </div>
 
-                <div class="info-row">
-                    <span class="info-label">Time</span>
-                    <span class="info-value" id="displayClassTime"></span>
-                </div>
+                <div id="status-message" class="hidden"></div>
+            </form>
 
-                <button id="markBtn" class="primary-btn full-width-btn" onclick="submitAttendance()">Mark
-                    Attendance</button>
+            <div style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border);">
+                <a href="admin.html" style="color: #94a3b8; text-decoration: none; font-size: 0.875rem; transition: color 0.3s;">
+                    Go to Admin Dashboard &rarr;
+                </a>
             </div>
-        </div>
+        </main>
     </div>
 
-    <script>
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbziHSuvnNluseRHw2xWuW-rSDMDrJRbkA3efVU-U3eZg8oE4C9x4QpU790iJJ1w8UB-/exec";
-        let currentData = {};
-
-        // Add Enter key support
-        document.getElementById('nicInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                searchStudent();
-            }
-        });
-
-        async function searchStudent() {
-            const nicInput = document.getElementById('nicInput');
-            const nic = nicInput.value.trim();
-            const errorDiv = document.getElementById('errorMessage');
-            const card = document.getElementById('classCard');
-            const searchBtn = document.querySelector('button[onclick="searchStudent()"]');
-
-            if (!nic) {
-                errorDiv.innerText = "Please enter a NIC number";
-                return;
-            }
-
-            // UI State: Loading
-            errorDiv.innerText = "";
-            searchBtn.innerText = "Searching...";
-            searchBtn.disabled = true;
-            card.style.display = "none";
-
-            try {
-                const resp = await fetch(`${scriptUrl}?action=searchStudent&nic=${encodeURIComponent(nic)}`);
-                const result = await resp.json();
-
-                if (result.status === "error") {
-                    errorDiv.innerText = result.message;
-                } else {
-                    errorDiv.innerText = "";
-                    card.style.display = "block";
-
-                    // Format the greeting nicely
-                    document.getElementById('displayStudentName').innerText = `Welcome, ${result.studentName}`;
-                    document.getElementById('displayClassName').innerText = result.classDetails.name;
-                    document.getElementById('displayClassTime').innerText = result.classDetails.time;
-
-                    currentData = { nic: nic, classId: result.classDetails.id };
-                }
-            } catch (err) {
-                console.error(err);
-                errorDiv.innerText = "Failed to connect. Please check your internet.";
-            } finally {
-                searchBtn.innerText = "Search";
-                searchBtn.disabled = false;
-            }
-        }
-
-        async function submitAttendance() {
-            const btn = document.getElementById('markBtn');
-            const originalText = btn.innerText;
-
-            btn.disabled = true;
-            btn.innerText = "Marking...";
-
-            try {
-                await fetch(scriptUrl, {
-                    method: "POST",
-                    body: JSON.stringify({
-                        action: "markAttendance",
-                        nic: currentData.nic,
-                        classId: currentData.classId
-                    })
-                });
-
-                alert("Attendance Recorded Successfully!");
-                location.reload();
-            } catch (err) {
-                console.error(err);
-                alert("Failed to mark attendance. Please try again.");
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
-        }
-    </script>
+    <!-- Script Placeholder -->
+    <script src="script.js"></script>
 </body>
-
 </html>
