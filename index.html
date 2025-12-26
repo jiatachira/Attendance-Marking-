@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="main-container">
+        <div class="header-section">
+            <h2>Student Attendance</h2>
+            <p>Enter your NIC to mark your attendance</p>
+        </div>
+
+        <div class="card-wrapper">
+            <div class="input-group">
+                <input type="text" id="nicInput" placeholder="Enter NIC Number" autocomplete="off">
+                <button class="primary-btn" onclick="searchStudent()">Search</button>
+            </div>
+
+            <div id="errorMessage" class="error-message"></div>
+
+            <div id="classCard" class="result-card">
+                <div class="student-info">
+                    <h3 id="displayStudentName"></h3>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Class</span>
+                    <span class="info-value" id="displayClassName"></span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Time</span>
+                    <span class="info-value" id="displayClassTime"></span>
+                </div>
+
+                <button id="markBtn" class="primary-btn full-width-btn" onclick="submitAttendance()">Mark
+                    Attendance</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbziHSuvnNluseRHw2xWuW-rSDMDrJRbkA3efVU-U3eZg8oE4C9x4QpU790iJJ1w8UB-/exec";
+        let currentData = {};
+
+        // Add Enter key support
+        document.getElementById('nicInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                searchStudent();
+            }
+        });
+
+        async function searchStudent() {
+            const nicInput = document.getElementById('nicInput');
+            const nic = nicInput.value.trim();
+            const errorDiv = document.getElementById('errorMessage');
+            const card = document.getElementById('classCard');
+            const searchBtn = document.querySelector('button[onclick="searchStudent()"]');
+
+            if (!nic) {
+                errorDiv.innerText = "Please enter a NIC number";
+                return;
+            }
+
+            // UI State: Loading
+            errorDiv.innerText = "";
+            searchBtn.innerText = "Searching...";
+            searchBtn.disabled = true;
+            card.style.display = "none";
+
+            try {
+                const resp = await fetch(`${scriptUrl}?action=searchStudent&nic=${encodeURIComponent(nic)}`);
+                const result = await resp.json();
+
+                if (result.status === "error") {
+                    errorDiv.innerText = result.message;
+                } else {
+                    errorDiv.innerText = "";
+                    card.style.display = "block";
+
+                    // Format the greeting nicely
+                    document.getElementById('displayStudentName').innerText = `Welcome, ${result.studentName}`;
+                    document.getElementById('displayClassName').innerText = result.classDetails.name;
+                    document.getElementById('displayClassTime').innerText = result.classDetails.time;
+
+                    currentData = { nic: nic, classId: result.classDetails.id };
+                }
+            } catch (err) {
+                console.error(err);
+                errorDiv.innerText = "Failed to connect. Please check your internet.";
+            } finally {
+                searchBtn.innerText = "Search";
+                searchBtn.disabled = false;
+            }
+        }
+
+        async function submitAttendance() {
+            const btn = document.getElementById('markBtn');
+            const originalText = btn.innerText;
+
+            btn.disabled = true;
+            btn.innerText = "Marking...";
+
+            try {
+                await fetch(scriptUrl, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        action: "markAttendance",
+                        nic: currentData.nic,
+                        classId: currentData.classId
+                    })
+                });
+
+                alert("Attendance Recorded Successfully!");
+                location.reload();
+            } catch (err) {
+                console.error(err);
+                alert("Failed to mark attendance. Please try again.");
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>
