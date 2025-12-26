@@ -125,8 +125,15 @@ button {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .student-info {
@@ -174,4 +181,38 @@ button {
     margin-top: 0.5rem;
     text-align: center;
     min-height: 20px;
+}
+
+/* Mobile Responsiveness */
+@media screen and (max-height: 500px) {
+    body {
+        align-items: flex-start;
+        padding-top: 20px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    body {
+        padding: 15px;
+    }
+
+    .header-section h2 {
+        font-size: 1.5rem;
+    }
+
+    .card-wrapper {
+        padding: 1.5rem;
+    }
+
+    .input-group {
+        flex-direction: column;
+    }
+
+    .input-group button {
+        width: 100%;
+    }
+
+    .info-row {
+        font-size: 0.875rem;
+    }
 }
