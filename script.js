@@ -2,65 +2,137 @@
 // CONFIGURATION
 // ==========================================
 // REPLACE THIS URL WITH YOUR NEW DEPLOYMENT URL
-const API_URL = "https://script.google.com/macros/s/AKfycbwomYJlinNSHS4ygVErqmnWFTxLpkUFkouWIqt0P0Ds07fg7geh3ls2wz_5ubuBRV5q/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxP4G8OCEdrfUdrGWefg4fBj9kVnAAGy0mnAAUvPzzpRdpe7rcvtOz8i6h7P1jo0dYi/exec";
 
 /**
  * Main Logic for Student Portal
  */
-async function handleAttendance(event) {
+async function searchClasses(event) {
     event.preventDefault();
 
     const nicInput = document.getElementById('nic');
     const nic = nicInput.value.trim();
     const btn = event.target.querySelector('button');
     const statusDiv = document.getElementById('status-message');
+    const container = document.getElementById('classes-container');
 
     if (!nic) return;
 
+    // Reset UI
+    container.innerHTML = '';
+    statusDiv.className = 'hidden';
+
     // UI: Loading State
     btn.disabled = true;
+    const originalBtnContent = btn.innerHTML;
     btn.innerHTML = '<div class="loader" style="width:20px; height:20px; border-width:2px;"></div>';
-    statusDiv.className = 'hidden';
 
     try {
         if (API_URL.includes("INSERT_YOUR")) {
             throw new Error("System Setup Incomplete: Please update the API_URL in script.js");
         }
 
-        // Prepare request
-        // We assume the backend handles 'action=mark' or similar logic, 
-        // OR simply takes the data and processes it.
-        // Based on prompt: "Matches Student Intake... with scheduled class".
-        // We send NIC. The backend checks everything.
-
         const response = await fetch(API_URL, {
             method: 'POST',
+            redirect: "follow",
             body: JSON.stringify({
-                action: 'markAttendance',
-                nic: nic,
-                timestamp: new Date().toISOString()
+                action: 'getStudentClasses',
+                nic: nic
             })
         });
 
-        // Apps Script often redirects or returns JSON. 
-        // We need to handle text/json response.
         const result = await response.json();
 
         if (result.status === 'success') {
-            showStatus('Attendance Marked Successfully!', 'success');
-            nicInput.value = ''; // Clear input
+            if (result.data.length === 0) {
+                showStatus('No classes found for you today.', 'error');
+            } else {
+                renderClasses(result.data, nic);
+            }
         } else {
-            // Handle specific errors like "Duplicate", "No Class Found", "Invalid NIC"
-            showStatus(result.message || 'Failed to mark attendance.', 'error');
+            showStatus(result.message || 'Failed to search classes.', 'error');
         }
 
     } catch (error) {
-        console.error("Attendance Error:", error);
+        console.error("Search Error:", error);
         showStatus(error.message || 'Network Error. Please try again.', 'error');
     } finally {
-        // UI: Reset
         btn.disabled = false;
-        btn.innerHTML = '<span>Mark Attendance</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>';
+        btn.innerHTML = originalBtnContent;
+    }
+}
+
+function renderClasses(classes, nic) {
+    const container = document.getElementById('classes-container');
+
+    classes.forEach(cls => {
+        const card = document.createElement('div');
+        // Styling matches glass-panel class but simpler for inner cards
+        card.style.padding = "1.5rem";
+        card.style.border = "1px solid rgba(255, 255, 255, 0.1)";
+        card.style.background = "rgba(255, 255, 255, 0.03)";
+        card.style.borderRadius = "12px";
+        card.className = "fade-in";
+
+        let actionBtn;
+        if (cls.isMarked) {
+            actionBtn = `<button disabled class="btn" style="width:100%; background: #10b981; border: none; cursor: default; opacity: 0.8;">Attendance Marked</button>`;
+        } else {
+            // Pass single quotes correctly
+            actionBtn = `<button onclick="markAttendance('${cls.id}', '${nic}', this)" class="btn btn-primary" style="width:100%;">Mark Attendance</button>`;
+        }
+
+        card.innerHTML = `
+            <div style="margin-bottom: 1rem; text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h3 style="margin: 0; font-size: 1.25rem; color: #fff; font-weight: 600;">${cls.id}</h3>
+                    <span style="font-size: 0.8rem; padding: 0.2rem 0.6rem; background: rgba(255,255,255,0.1); border-radius: 20px; color: #cbd5e1;">${cls.intake}</span>
+                </div>
+                <p style="margin: 0; color: #94a3b8; font-size: 0.9rem;">Date: ${cls.date}</p>
+            </div>
+            ${actionBtn}
+        `;
+        container.appendChild(card);
+    });
+}
+
+async function markAttendance(classId, nic, btn) {
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Processing...';
+
+    const statusDiv = document.getElementById('status-message');
+    statusDiv.className = 'hidden';
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            redirect: "follow",
+            body: JSON.stringify({
+                action: 'markAttendance',
+                nic: nic,
+                classId: classId,
+                timestamp: new Date().toISOString()
+            })
+        });
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            btn.innerHTML = 'Attendance Marked';
+            btn.style.background = '#10b981';
+            btn.style.border = 'none';
+            btn.onclick = null; // Remove handler
+            showStatus('Attendance marked successfully!', 'success');
+        } else {
+            showStatus(result.message || 'Failed to mark attendance', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (e) {
+        console.error(e);
+        showStatus('Network error while marking attendance.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }
 

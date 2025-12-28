@@ -2,7 +2,7 @@
 // CONFIGURATION
 // ==========================================
 // REPLACE THIS URL WITH YOUR NEW DEPLOYMENT URL
-const API_URL = "https://script.google.com/macros/s/AKfycbwomYJlinNSHS4ygVErqmnWFTxLpkUFkouWIqt0P0Ds07fg7geh3ls2wz_5ubuBRV5q/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxP4G8OCEdrfUdrGWefg4fBj9kVnAAGy0mnAAUvPzzpRdpe7rcvtOz8i6h7P1jo0dYi/exec";
 
 // State
 let currentReportData = []; // Store for CSV export

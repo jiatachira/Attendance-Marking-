@@ -1,43 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AttendX - Student Portal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container center-xy">
-        <main class="glass-panel fade-in" style="width: 100%; max-width: 480px; padding: 3rem; position: relative; overflow: hidden;">
+        <main class="glass-panel fade-in"
+            style="width: 100%; max-width: 480px; padding: 3rem; position: relative; overflow: hidden;">
             <!-- Decorative elements -->
-            <div style="position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: var(--primary-color); filter: blur(60px); opacity: 0.5;"></div>
-            
+            <div
+                style="position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: var(--primary-color); filter: blur(60px); opacity: 0.5;">
+            </div>
+
             <div style="text-align: center; margin-bottom: 2.5rem;">
                 <h1 class="text-gradient" style="font-size: 3rem; margin-bottom: 0.5rem;">AttendX</h1>
                 <p style="color: #94a3b8;">Futuristic Attendance System</p>
             </div>
 
-            <form id="attendance-form" onsubmit="handleAttendance(event)">
+            <form id="attendance-form" onsubmit="searchClasses(event)">
                 <div class="form-group">
                     <label for="nic" class="form-label">National Identity Card (NIC)</label>
-                    <input type="text" id="nic" class="form-input" placeholder="Enter your NIC (e.g., 200012345V)" required autocomplete="off">
+                    <input type="text" id="nic" class="form-input" placeholder="Enter your NIC (e.g., 200012345V)"
+                        required autocomplete="off">
                 </div>
 
                 <div class="form-group">
-                    <button type="submit" class="btn btn-primary" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
-                        <span>Mark Attendance</span>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    <button type="submit" class="btn btn-primary"
+                        style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
+                        <span>Search Classes</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
                     </button>
                 </div>
 
                 <div id="status-message" class="hidden"></div>
             </form>
 
-            <div style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border);">
-                <a href="admin.html" style="color: #94a3b8; text-decoration: none; font-size: 0.875rem; transition: color 0.3s;">
+            <div id="classes-container" class="fade-in"
+                style="margin-top: 2rem; display: flex; flex-direction: column; gap: 1rem;"></div>
+
+            <div
+                style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border);">
+                <a href="admin.html"
+                    style="color: #94a3b8; text-decoration: none; font-size: 0.875rem; transition: color 0.3s;">
                     Go to Admin Dashboard &rarr;
                 </a>
             </div>
@@ -47,4 +64,5 @@
     <!-- Script Placeholder -->
     <script src="script.js"></script>
 </body>
+
 </html>
