@@ -2,7 +2,7 @@
 // CONFIGURATION
 // ==========================================
 // REPLACE THIS URL WITH YOUR NEW DEPLOYMENT URL
-const API_URL = "https://script.google.com/macros/s/AKfycbxP4G8OCEdrfUdrGWefg4fBj9kVnAAGy0mnAAUvPzzpRdpe7rcvtOz8i6h7P1jo0dYi/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyyizBQxnRRCS7UB4rJP2Vyw_WYefG0tyOIJlxjRmHHv6JIDXFz8G_kBnbNp0SZolVY/exec";
 
 /**
  * Main Logic for Student Portal
@@ -75,11 +75,24 @@ function renderClasses(classes, nic) {
         card.className = "fade-in";
 
         let actionBtn;
+        let resourceBtn = '';
+
+        // Prepare Resource Button HTML if link exists
+        if (cls.resourceLink) {
+            const link = cls.resourceLink;
+            resourceBtn = `<a href="${link}" target="_blank" class="btn" style="width:100%; background: #3b82f6; border: none; margin-top: 10px; display: block; text-align: center; text-decoration: none; color: white;">View Resources</a>`;
+        }
+
         if (cls.isMarked) {
-            actionBtn = `<button disabled class="btn" style="width:100%; background: #10b981; border: none; cursor: default; opacity: 0.8;">Attendance Marked</button>`;
+            actionBtn = `<button disabled class="btn" style="width:100%; background: #10b981; color: white; border: none; cursor: default; opacity: 0.8;">Attendance Marked</button>`;
+            // If marked and has resource, show resource button
+            if (cls.resourceLink) {
+                actionBtn += resourceBtn;
+            }
         } else {
-            // Pass single quotes correctly
-            actionBtn = `<button onclick="markAttendance('${cls.id}', '${nic}', this)" class="btn btn-primary" style="width:100%;">Mark Attendance</button>`;
+            // Pass resourceLink to the function safely
+            const cleanLink = cls.resourceLink ? cls.resourceLink.replace(/'/g, "%27") : "";
+            actionBtn = `<button onclick="markAttendance('${cls.id}', '${nic}', this, '${cleanLink}')" class="btn btn-primary" style="width:100%;">Mark Attendance</button>`;
         }
 
         card.innerHTML = `
@@ -90,13 +103,15 @@ function renderClasses(classes, nic) {
                 </div>
                 <p style="margin: 0; color: #94a3b8; font-size: 0.9rem;">Date: ${cls.date}</p>
             </div>
-            ${actionBtn}
+            <div class="action-container">
+                ${actionBtn}
+            </div>
         `;
         container.appendChild(card);
     });
 }
 
-async function markAttendance(classId, nic, btn) {
+async function markAttendance(classId, nic, btn, resourceLink) {
     btn.disabled = true;
     const originalText = btn.innerHTML;
     btn.innerHTML = 'Processing...';
@@ -120,9 +135,32 @@ async function markAttendance(classId, nic, btn) {
         if (result.status === 'success') {
             btn.innerHTML = 'Attendance Marked';
             btn.style.background = '#10b981';
+            btn.style.color = 'white';
             btn.style.border = 'none';
             btn.onclick = null; // Remove handler
             showStatus('Attendance marked successfully!', 'success');
+
+            // Show resource button if link exists
+            if (resourceLink) {
+                const linkBtn = document.createElement('a');
+                linkBtn.href = resourceLink;
+                linkBtn.target = "_blank";
+                linkBtn.className = "btn";
+                linkBtn.style.width = "100%";
+                linkBtn.style.background = "#3b82f6";
+                linkBtn.style.color = "white";
+                linkBtn.style.border = "none";
+                linkBtn.style.marginTop = "10px";
+                linkBtn.style.display = "block";
+                linkBtn.style.textAlign = "center";
+                linkBtn.style.textDecoration = "none";
+                linkBtn.innerText = "View Resources";
+
+                // Append after the attendance button. 
+                // Note: btn is inside a div.action-container now because of my renderClasses change.
+                btn.parentNode.appendChild(linkBtn);
+            }
+
         } else {
             showStatus(result.message || 'Failed to mark attendance', 'error');
             btn.disabled = false;
