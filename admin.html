@@ -36,93 +36,346 @@
                 <div id="login-error" class="hidden status-message status-error">Invalid Credentials</div>
             </form>
             <div style="text-align: center; margin-top: 1.5rem;">
+                <p onclick="showForgotPassword()"
+                    style="color: var(--primary-color); cursor: pointer; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                    Forgot Password?</p>
                 <a href="index.html" style="color: #94a3b8; font-size: 0.875rem;">&larr; Back to Portal</a>
             </div>
         </div>
     </div>
 
+    <!-- Forgot Password Overlay -->
+    <div id="forgot-password-overlay" class="container center-xy hidden"
+        style="position: fixed; inset: 0; z-index: 60; background: var(--bg-color);">
+        <div class="glass-panel fade-in" style="width: 100%; max-width: 400px; padding: 2.5rem;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h2 class="text-gradient">Reset Password</h2>
+                <p style="color: #94a3b8;" id="reset-step-desc">Enter your username</p>
+            </div>
+
+            <!-- Step 1: Username -->
+            <div id="reset-step-1">
+                <div class="form-group">
+                    <label class="form-label">Admin Username</label>
+                    <input type="text" id="reset-username" class="form-input" placeholder="Enter username">
+                </div>
+                <button onclick="sendResetCode()" class="btn btn-primary" style="width: 100%;">Send Code</button>
+            </div>
+
+            <!-- Step 2: OTP -->
+            <div id="reset-step-2" class="hidden">
+                <div class="form-group">
+                    <label class="form-label">Verification Code</label>
+                    <input type="text" id="reset-otp" class="form-input" placeholder="6-digit code">
+                </div>
+                <button onclick="verifyResetCode()" class="btn btn-primary" style="width: 100%;">Verify Code</button>
+            </div>
+
+            <!-- Step 3: New Password -->
+            <div id="reset-step-3" class="hidden">
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <input type="password" id="reset-pass-new" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" id="reset-pass-confirm" class="form-input">
+                </div>
+                <button onclick="resetPassword()" class="btn btn-primary" style="width: 100%;">Update Password</button>
+            </div>
+
+            <div id="reset-msg" class="hidden status-message" style="margin-top: 1rem;"></div>
+
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <button onclick="closeForgotPassword()" class="btn btn-secondary"
+                    style="background: transparent; border: none; color: #94a3b8;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Dashboard Content -->
-    <div id="dashboard" class="container hidden fade-in" style="padding-top: 2rem;">
-        <header class="glass-panel"
-            style="padding: 1.5rem 2rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <div
-                    style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-family: var(--font-heading);">
-                    AX</div>
-                <div>
-                    <h2 style="font-size: 1.5rem;">Dashboard</h2>
-                    <div style="font-size: 0.875rem; color: #94a3b8;">Select a date to view reports</div>
+    <div id="dashboard" class="dashboard-layout hidden fade-in">
+
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="brand">
+                <div class="logo">AX</div>
+                <h2 style="font-size: 1.5rem;">AttendX</h2>
+            </div>
+            <nav class="nav-menu">
+                <button onclick="switchSection('home')" class="nav-item active" id="nav-home">
+                    <span>📊</span> Dashboard
+                </button>
+                <button onclick="switchSection('classes')" class="nav-item" id="nav-classes">
+                    <span>📅</span> Classes
+                </button>
+                <button onclick="switchSection('students')" class="nav-item" id="nav-students">
+                    <span>🎓</span> Students
+                </button>
+                <button onclick="switchSection('reports')" class="nav-item" id="nav-reports">
+                    <span>📑</span> Reports
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <button onclick="logout()" class="btn btn-secondary" style="width: 100%">Log Out</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <!-- SECTION: HOME (DASHBOARD) -->
+            <div id="section-home" class="content-section fade-in">
+                <header class="content-header">
+                    <div>
+                        <h2>Dashboard Overview</h2>
+                        <p style="color: #94a3b8; font-size: 0.9rem;">Welcome back, Admin</p>
+                    </div>
+                    <span class="date-badge" id="lbl-today-date">--</span>
+                </header>
+
+                <!-- Cards -->
+                <div class="stats-grid">
+                    <div class="glass-panel stat-card">
+                        <p style="color: #94a3b8; font-size: 0.9rem;">Total Students</p>
+                        <p class="stat-value" id="stat-total-students">-</p>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <p style="color: #94a3b8; font-size: 0.9rem;">Classes Today</p>
+                        <p class="stat-value text-gradient" id="stat-today-classes">-</p>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <p style="color: #94a3b8; font-size: 0.9rem;">Inactive Alert</p>
+                        <p class="stat-value text-danger" id="stat-inactive">-</p>
+                        <p style="font-size: 0.75rem; color: #94a3b8;">> 5 Consecutive Absences</p>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
+                    <h3 style="margin-bottom: 1.5rem;">Weekly Attendance Trend</h3>
+                    <div style="height: 300px; width: 100%;">
+                        <canvas id="attendanceChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Inactive Students Table -->
+                <div class="glass-panel" style="padding: 2rem;">
+                    <div class="admin-header" style="margin-bottom: 1rem; padding-bottom: 1rem;">
+                        <h3 class="text-danger">Inactive Students List</h3>
+                        <p style="font-size: 0.875rem; color: #94a3b8;">Students who missed their last 5 scheduled
+                            classes.</p>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>NIC</th>
+                                    <th>Name</th>
+                                    <th>Intake</th>
+                                    <th>Missed Classes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inactive-table-body">
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: #94a3b8;">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-            <button onclick="logout()" class="btn btn-secondary" style="font-size: 0.875rem;">Log Out</button>
-        </header>
 
-        <!-- Search Section -->
-        <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
-            <div class="admin-header">
-                <h3>Find Scheduled Classes</h3>
-            </div>
-            <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-                <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
-                    <label class="form-label">Select Date</label>
-                    <input type="date" id="search-date" class="form-input">
+            <!-- SECTION: CLASSES (Old Tab 1) -->
+            <div id="section-classes" class="content-section hidden fade-in">
+                <header class="content-header">
+                    <h2>Class Management</h2>
+                </header>
+
+                <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
+                    <div class="admin-header">
+                        <h3>Find Scheduled Classes</h3>
+                    </div>
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                            <label class="form-label">Select Date</label>
+                            <input type="date" id="search-date" class="form-input">
+                        </div>
+                        <button onclick="searchClasses()" class="btn btn-primary" style="height: 50px;">Search
+                            Classes</button>
+                    </div>
                 </div>
-                <button onclick="searchClasses()" class="btn btn-primary" style="height: 50px;">Search Classes</button>
-            </div>
-        </div>
 
-        <!-- Section: Class List -->
-        <div id="class-list-section" class="hidden">
-            <h3 style="margin-bottom: 1rem; color: #94a3b8; font-size: 0.875rem; text-transform: uppercase;">Scheduled
-                Classes</h3>
-
-            <div id="classes-container" class="stats-grid"
-                style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
-                <!-- Cards injected here -->
-            </div>
-            <div id="no-classes-msg" class="hidden" style="text-align: center; padding: 2rem; color: #94a3b8;">
-                No classes found for this date.
-            </div>
-        </div>
-
-        <!-- Section: Detailed Report -->
-        <div id="report-view" class="glass-panel hidden fade-in" style="padding: 2rem; margin-top: 2rem;">
-            <div class="admin-header">
-                <div>
-                    <h3 id="report-title">Attendance Report</h3>
-                    <p id="report-subtitle" style="color: #94a3b8; font-size: 0.9rem;">--</p>
+                <!-- Section: Class List -->
+                <div id="class-list-section" class="hidden">
+                    <h3 style="margin-bottom: 1rem; color: #94a3b8; font-size: 0.875rem; text-transform: uppercase;">
+                        Scheduled Classes</h3>
+                    <div id="classes-container" class="stats-grid"
+                        style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));"></div>
+                    <div id="no-classes-msg" class="hidden" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        No classes found for this date.</div>
                 </div>
-                <div style="display: flex; gap: 1rem;">
-                    <button onclick="exportCSV()" class="btn btn-secondary">Export to CSV</button>
-                    <button onclick="closeReport()" class="btn btn-secondary">Close</button>
+
+                <!-- Detailed Report -->
+                <div id="report-view" class="glass-panel hidden fade-in" style="padding: 2rem; margin-top: 2rem;">
+                    <div class="admin-header">
+                        <div>
+                            <h3 id="report-title">Attendance Report</h3>
+                            <p id="report-subtitle" style="color: #94a3b8; font-size: 0.9rem;">--</p>
+                        </div>
+                        <div style="display: flex; gap: 1rem;">
+                            <button onclick="toggleEmailComposer()" class="btn btn-secondary">Send Email</button>
+                            <button onclick="exportCSV()" class="btn btn-secondary">Export to CSV</button>
+                            <button onclick="closeReport()" class="btn btn-secondary">Close</button>
+                        </div>
+                    </div>
+
+                    <!-- Email Composer -->
+                    <div id="email-composer" class="hidden"
+                        style="margin-bottom: 2rem; padding: 1.5rem; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                        <h4 style="margin-bottom: 1rem;">Send Email to Absent Students</h4>
+                        <div class="form-group">
+                            <label class="form-label">Message</label>
+                            <textarea id="email-body" class="form-input" rows="4"
+                                placeholder="Enter your message here..."></textarea>
+                        </div>
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <button onclick="sendAbsenteeEmails()" class="btn btn-primary" id="btn-send-email">Send
+                                Emails</button>
+                            <span id="email-status" class="status-message hidden"></span>
+                        </div>
+                    </div>
+
+                    <div id="report-loading" class="hidden" style="text-align: center; padding: 4rem;">
+                        <div class="loader"></div>
+                        <p style="margin-top: 1rem; color: #94a3b8;">Analyzing Attendance...</p>
+                    </div>
+                    <div id="report-table-container" style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>NIC</th>
+                                    <th>Student Name</th>
+                                    <th>Status</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="report-body"></tbody>
+                        </table>
+                    </div>
+                    <div id="report-summary"
+                        style="margin-top: 1rem; text-align: right; color: #94a3b8; font-size: 0.9rem;"></div>
                 </div>
             </div>
 
-            <div id="report-loading" class="hidden" style="text-align: center; padding: 4rem;">
-                <div class="loader"></div>
-                <p style="margin-top: 1rem; color: #94a3b8;">Analyzing Attendance...</p>
+            <!-- SECTION: STUDENTS (Old Tab 2) -->
+            <div id="section-students" class="content-section hidden fade-in">
+                <header class="content-header">
+                    <h2>Student Records</h2>
+                </header>
+
+                <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
+                    <div class="admin-header">
+                        <h3>Find Student History</h3>
+                    </div>
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                            <label class="form-label">Student Name or NIC</label>
+                            <input type="text" id="search-student-query" class="form-input"
+                                placeholder="Enter Name or NIC">
+                        </div>
+                        <button onclick="searchStudent()" class="btn btn-primary" style="height: 50px;">Search
+                            Student</button>
+                    </div>
+                </div>
+
+                <!-- Student Search Results -->
+                <div id="student-results-section" class="hidden">
+                    <h3 style="margin-bottom: 1rem; color: #94a3b8; font-size: 0.875rem; text-transform: uppercase;">
+                        Search Results</h3>
+                    <div id="student-list-container" class="stats-grid"
+                        style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));"></div>
+                </div>
+
+                <!-- Student History Report -->
+                <div id="student-history-view" class="glass-panel hidden fade-in"
+                    style="padding: 2rem; margin-top: 2rem;">
+                    <div class="admin-header">
+                        <div>
+                            <h3 id="history-student-name">Student Name</h3>
+                            <p id="history-student-nic" style="color: #94a3b8; font-size: 0.9rem;">NIC: -</p>
+                        </div>
+                        <button onclick="closeStudentHistory()" class="btn btn-secondary">Close</button>
+                    </div>
+                    <div id="history-loading" class="hidden" style="text-align: center; padding: 4rem;">
+                        <div class="loader"></div>
+                        <p style="margin-top: 1rem; color: #94a3b8;">Loading History...</p>
+                    </div>
+                    <div id="history-table-container" style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Class Name</th>
+                                    <th>Status</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-body"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
-            <div id="report-table-container" style="overflow-x: auto;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>NIC</th>
-                            <th>Student Name</th>
-                            <th>Status</th>
-                            <th>Time</th>
-                        </tr>
-                    </thead>
-                    <tbody id="report-body">
-                        <!-- Rows injected here -->
-                    </tbody>
-                </table>
-            </div>
-            <div id="report-summary" style="margin-top: 1rem; text-align: right; color: #94a3b8; font-size: 0.9rem;">
-                <!-- Summary injected here -->
-            </div>
-        </div>
+            <!-- SECTION: REPORTS (NEW) -->
+            <div id="section-reports" class="content-section hidden fade-in">
+                <header class="content-header">
+                    <h2>System Reports</h2>
+                </header>
 
+                <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
+                    <div class="admin-header">
+                        <h3>Student Status Report</h3>
+                        <p style="font-size: 0.875rem; color: #94a3b8;">Identify Active vs Inactive students by Intake.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                            <label class="form-label">Batch / Intake Code</label>
+                            <select id="report-intake-select" class="form-input">
+                                <option value="" disabled selected>Select an Intake</option>
+                            </select>
+                        </div>
+                        <button onclick="generateIntakeReport()" class="btn btn-primary" style="height: 50px;">Generate
+                            Report</button>
+                    </div>
+                </div>
+
+                <div id="intake-report-container" class="glass-panel hidden fade-in" style="padding: 2rem;">
+                    <div class="admin-header">
+                        <h3 id="intake-report-title">Results</h3>
+                        <button onclick="closeIntakeReport()" class="btn btn-secondary">Clear</button>
+                    </div>
+                    <div id="intake-report-loading" class="hidden" style="text-align: center; padding: 2rem;">
+                        <div class="loader"></div>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>NIC</th>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                    <th>Consecutive Absences</th>
+                                </tr>
+                            </thead>
+                            <tbody id="intake-report-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
     </div>
 
     <script src="admin.js"></script>
