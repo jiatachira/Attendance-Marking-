@@ -172,13 +172,15 @@
                                 <tr>
                                     <th>NIC</th>
                                     <th>Name</th>
-                                    <th>Intake</th>
-                                    <th>Missed Classes</th>
+                                    <th>Contact</th>
+                                    <th>Status</th>
+                                    <th>Last Comment</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="inactive-table-body">
                                 <tr>
-                                    <td colspan="4" style="text-align: center; color: #94a3b8;">Loading...</td>
+                                    <td colspan="6" style="text-align: center; color: #94a3b8;">Loading...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -186,7 +188,8 @@
                 </div>
             </div>
 
-            <!-- SECTION: CLASSES (Old Tab 1) -->
+
+
             <div id="section-classes" class="content-section hidden fade-in">
                 <header class="content-header">
                     <h2>Class Management</h2>
@@ -256,7 +259,8 @@
                                 <tr>
                                     <th>NIC</th>
                                     <th>Student Name</th>
-                                    <th>Status</th>
+                                    <th>Account Status</th>
+                                    <th>Attendance</th>
                                     <th>Time</th>
                                 </tr>
                             </thead>
@@ -376,6 +380,46 @@
             </div>
 
         </main>
+    </div>
+
+    <!-- MOVED MODALS -->
+    <!-- Add Comment Modal -->
+    <div id="add-comment-modal" class="container center-xy hidden"
+        style="position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,0.8);">
+        <div class="glass-panel fade-in" style="width: 100%; max-width: 500px; padding: 2rem;">
+            <h3>Add Call Comment</h3>
+            <p id="comment-student-info" style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1rem;">--</p>
+
+            <div style="margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Previous
+                Comments</div>
+            <div id="add-comment-history-list"
+                style="max-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 4px; padding: 0.5rem; margin-bottom: 1rem; border: 1px solid rgba(255,255,255,0.1);">
+                <p style="text-align: center; color: #64748b; padding: 1rem;">Loading history...</p>
+            </div>
+
+            <textarea id="new-comment-text" class="form-input" rows="3"
+                placeholder="Enter details of the NEW call..."></textarea>
+            <div style="display: flex; gap: 1rem; margin-top: 1rem; justify-content: flex-end;">
+                <button onclick="closeAddComment()" class="btn btn-secondary">Cancel</button>
+                <button onclick="saveCheckComment()" class="btn btn-primary">Save Comment</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Comments Modal -->
+    <div id="view-comments-modal" class="container center-xy hidden"
+        style="position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,0.8);">
+        <div class="glass-panel fade-in"
+            style="width: 100%; max-width: 500px; padding: 2rem; max-height: 80vh; display: flex; flex-direction: column;">
+            <div style="margin-bottom: 1rem;">
+                <h3>Call History</h3>
+                <p id="view-comments-info" style="color: #94a3b8; font-size: 0.9rem;">--</p>
+            </div>
+            <div id="comments-list-container" style="overflow-y: auto; flex: 1; margin-bottom: 1rem;">
+                <!-- Comments go here -->
+            </div>
+            <button onclick="closeViewComments()" class="btn btn-secondary" style="align-self: flex-end;">Close</button>
+        </div>
     </div>
 
     <script src="admin.js"></script>

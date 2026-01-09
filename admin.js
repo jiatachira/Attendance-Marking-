@@ -2,12 +2,20 @@
 // CONFIGURATION
 // ==========================================
 // REPLACE THIS URL WITH YOUR NEW DEPLOYMENT URL
-const API_URL = "https://script.google.com/macros/s/AKfycbxUv_0unVvqLPSHVsdA7XJ0RisLiaPvges4qoYC8Bi2RopSMR0mRLNiKGxbAQn3loVk/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzIWLul3R9lFieZ7AfXgOHhxUyeO_5TNf53HEA9I2-qsJ_gP8BZ8KTvqRkWitAGQ1YI/exec";
 
 // State
 let currentReportData = []; // Store for CSV export
 
-// Login
+// SESSION MGMT
+let sessionToken = localStorage.getItem('sessionToken');
+let sessionTimeout;
+
+window.onload = function () {
+    checkSessionOnLoad();
+    startIdleTimer();
+};
+
 async function handleLogin(event) {
     event.preventDefault();
     const user = document.getElementById('admin-user').value;
@@ -32,24 +40,87 @@ async function handleLogin(event) {
         const result = await response.json();
 
         if (result.status === 'success') {
+            // Save Session
+            sessionToken = result.token;
+            localStorage.setItem('sessionToken', sessionToken);
+            localStorage.setItem('adminUser', result.username);
+
             document.getElementById('login-overlay').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
 
             // Initial Load
             loadDashboard();
             switchSection('home');
+            startIdleTimer();
         } else {
-            throw new Error('Invalid Credentials');
+            throw new Error(result.message || 'Invalid Credentials');
         }
 
     } catch (error) {
         console.error("Login Error:", error);
-        errorMsg.textContent = error.message;
+        errorMsg.textContent = error.message || "Connection Failed";
         errorMsg.classList.remove('hidden');
     } finally {
         btn.disabled = false;
         btn.textContent = "Unlock System";
     }
+}
+
+async function checkSessionOnLoad() {
+    const storedToken = localStorage.getItem('sessionToken');
+
+    if (storedToken) {
+        // Optimistic Load
+        document.getElementById('login-overlay').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+        loadDashboard();
+        switchSection('home');
+
+        // Verify
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'verifySession', token: storedToken })
+            });
+            const result = await response.json();
+            if (result.status !== 'success') {
+                logout();
+            }
+        } catch (e) { console.log('Offline/Error check'); }
+    } else {
+        document.getElementById('login-overlay').classList.remove('hidden');
+    }
+}
+
+function logout() {
+    localStorage.removeItem('sessionToken');
+    localStorage.removeItem('adminUser');
+    location.reload();
+}
+
+// IDLE TIMER
+function startIdleTimer() {
+    document.onmousemove = resetTimer;
+    document.onkeypress = resetTimer;
+    resetTimer();
+}
+
+function resetTimer() {
+    clearTimeout(sessionTimeout);
+    if (localStorage.getItem('sessionToken')) {
+        // 10 Mins = 600000 ms
+        sessionTimeout = setTimeout(lockScreen, 600000);
+    }
+}
+
+function lockScreen() {
+    document.getElementById('login-overlay').classList.remove('hidden');
+    document.getElementById('dashboard').classList.add('hidden');
+    document.getElementById('login-error').textContent = "Session Timed Out. Please login again.";
+    document.getElementById('login-error').classList.remove('hidden');
+    // We don't clear token immediately, but handleLogin will overwrite it. 
+    // Or we force fully clear:
+    // localStorage.removeItem('sessionToken'); 
 }
 
 // 1. Search Classes
@@ -186,9 +257,16 @@ function renderReportTable(data) {
         const isPresent = row.status === 'Present';
         if (isPresent) presentCount++;
 
+        // Account Status Badge
+        let accStatus = row.accountStatus || 'Active';
+        let accBadgeClass = 'status-present';
+        if (accStatus.toLowerCase() === 'postpond') accBadgeClass = 'status-absent';
+        if (accStatus.toLowerCase() === 'reject') accBadgeClass = 'status-error';
+
         tr.innerHTML = `
             <td style="font-family: monospace;">${row.nic}</td>
             <td>${row.name}</td>
+            <td><span class="status-pill ${accBadgeClass}" style="font-size: 0.75rem;">${accStatus}</span></td>
             <td><span class="status-pill ${isPresent ? 'status-present' : 'status-absent'}">${row.status}</span></td>
             <td>${row.time || '-'}</td>
         `;
@@ -269,15 +347,41 @@ async function loadDashboard() {
             const tbody = document.getElementById('inactive-table-body');
             tbody.innerHTML = '';
             if (inactive.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding: 2rem;">No inactive students found. Great job!</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding: 2rem;">No inactive students found. Great job!</td></tr>';
             } else {
                 inactive.forEach(s => {
                     const tr = document.createElement('tr');
+
+                    const status = s.status || 'Active';
+                    const isSel = (v) => (status.toLowerCase() === v.toLowerCase() ? 'selected' : '');
+
+                    // Escape for Safety
+                    const safeNic = String(s.nic).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    const safeName = String(s.name).replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
+
                     tr.innerHTML = `
                         <td style="font-family: monospace;">${s.nic}</td>
-                        <td>${s.name}</td>
-                        <td>${s.intake}</td>
-                        <td><span class="status-pill status-absent">${s.absentCount} Classes</span></td>
+                        <td>
+                            <div>${s.name}</div>
+                            <small style="color:#94a3b8;">${s.intake}</small>
+                        </td>
+                        <td>${s.phone || 'N/A'}</td>
+                        <td>
+                           <div style="display: flex; gap: 0.25rem;">
+                               <select id="status-dash-${safeNic}" class="search-input" style="padding: 0.2rem; font-size: 0.8rem; width: auto;">
+                                    <option value="Active" ${isSel('Active')}>Active</option>
+                                    <option value="Postpond" ${isSel('Postpond')}>Postpond</option>
+                                    <option value="Reject" ${isSel('Reject')}>Reject</option>
+                               </select>
+                               <button onclick="saveDashStatus('${safeNic}')" class="btn btn-primary" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">Save</button>
+                           </div>
+                        </td>
+                        <td style="max-width: 150px; font-size: 0.85rem; color: #cbd5e1;">${s.lastComment || 'Not Called'}</td>
+                        <td>
+                            <button onclick="openAddComment('${safeNic}', '${safeName}')" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                Add Comment
+                            </button>
+                        </td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -287,6 +391,235 @@ async function loadDashboard() {
     } catch (err) {
         console.error("Dashboard Load Error", err);
     }
+}
+
+async function saveDashStatus(nic) {
+    const select = document.getElementById(`status-dash-${nic}`);
+    const newStatus = select.value;
+    const btn = select.nextElementSibling;
+
+    // UI Feedback
+    const originalText = btn.textContent;
+    btn.textContent = "...";
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'updateStudentStatus',
+                nic: nic,
+                status: newStatus
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            alert(`Success: ${result.message}`);
+        } else {
+            alert(`Error: ${result.message}`);
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Failed to update status.");
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+}
+
+// 6. COMMENTS LOGIC
+let currentCommentNic = null;
+
+async function openAddComment(nic, name) {
+    currentCommentNic = nic;
+    document.getElementById('comment-student-info').textContent = `${name} (${nic})`;
+    document.getElementById('new-comment-text').value = '';
+
+    const historyList = document.getElementById('add-comment-history-list');
+    historyList.innerHTML = '<div class="loader-sm" style="margin: 1rem auto;"></div>'; // Simple loader
+
+    document.getElementById('add-comment-modal').classList.remove('hidden');
+
+    // Fetch History
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'getCallHistory',
+                nic: nic
+            })
+        });
+        const result = await response.json();
+
+        historyList.innerHTML = '';
+        if (result.status === 'success' && result.data.length > 0) {
+            result.data.forEach(c => {
+                // Format Time
+                let displayTime = c.time;
+                try {
+                    let dateObj;
+                    if (String(c.time).includes('T') || c.time instanceof Date) {
+                        dateObj = new Date(c.time);
+                    } else {
+                        // Assume HH:MM string
+                        const parts = String(c.time).split(':');
+                        if (parts.length >= 2) {
+                            dateObj = new Date();
+                            dateObj.setHours(parseInt(parts[0]));
+                            dateObj.setMinutes(parseInt(parts[1]));
+                        }
+                    }
+
+                    if (dateObj) {
+                        let h = dateObj.getHours();
+                        let m = dateObj.getMinutes();
+                        const ampm = h >= 12 ? 'PM' : 'AM';
+                        h = h % 12;
+                        h = h ? h : 12;
+                        const hh = h < 10 ? '0' + h : h;
+                        const mm = m < 10 ? '0' + m : m;
+                        displayTime = `${hh}.${mm} ${ampm}`;
+                    }
+                } catch (e) { displayTime = c.time; }
+
+                const displayDate = c.date ? String(c.date).split('T')[0] : '';
+
+                const div = document.createElement('div');
+                div.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+                div.style.padding = "0.5rem 0";
+                div.innerHTML = `
+                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.1rem;">${displayDate} &bull; ${displayTime}</div>
+                    <div style="font-size: 0.85rem; color: #cbd5e1;">${c.comment}</div>
+                `;
+                historyList.appendChild(div);
+            });
+        } else {
+            historyList.innerHTML = '<p style="text-align:center; color:#64748b; padding: 1rem; font-size: 0.8rem;">No previous comments.</p>';
+        }
+
+    } catch (e) {
+        console.error(e);
+        historyList.innerHTML = '<p style="text-align:center; color:#ef4444; font-size: 0.8rem;">Failed to load history.</p>';
+    }
+}
+
+function closeAddComment() {
+    document.getElementById('add-comment-modal').classList.add('hidden');
+    currentCommentNic = null;
+}
+
+async function saveCheckComment() {
+    const comment = document.getElementById('new-comment-text').value;
+    if (!comment) return alert("Please enter a comment.");
+
+    // UI Feedback is tricky without a specific button reference or status div in modal, 
+    // let's use generic Loading or just alert for now.
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'saveCallComment',
+                nic: currentCommentNic,
+                comment: comment
+            })
+        });
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            alert("Comment Saved");
+            closeAddComment();
+            loadDashboard(); // Reload to update "Last Comment"
+        } else {
+            alert("Error: " + result.message);
+        }
+    } catch (e) {
+        alert("Network Error");
+    }
+}
+
+async function viewStudentComments(nic) {
+    const modal = document.getElementById('view-comments-modal');
+    const container = document.getElementById('comments-list-container');
+    const info = document.getElementById('view-comments-info');
+
+    modal.classList.remove('hidden');
+    container.innerHTML = '<div class="loader"></div>';
+    info.textContent = `NIC: ${nic}`;
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'getCallHistory',
+                nic: nic
+            })
+        });
+        const result = await response.json();
+
+        container.innerHTML = '';
+        if (result.status === 'success') {
+            if (result.data.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#94a3b8;">No comments found.</p>';
+            } else {
+                result.data.forEach(c => {
+                    // Format Time
+                    let displayTime = c.time;
+                    try {
+                        let dateObj;
+                        if (String(c.time).includes('T') || c.time instanceof Date) {
+                            dateObj = new Date(c.time);
+                        } else {
+                            // Assume HH:MM string
+                            const parts = String(c.time).split(':');
+                            if (parts.length >= 2) {
+                                dateObj = new Date();
+                                dateObj.setHours(parseInt(parts[0]));
+                                dateObj.setMinutes(parseInt(parts[1]));
+                            }
+                        }
+
+                        if (dateObj) {
+                            let h = dateObj.getHours();
+                            let m = dateObj.getMinutes();
+                            const ampm = h >= 12 ? 'PM' : 'AM';
+                            h = h % 12;
+                            h = h ? h : 12;
+                            const hh = h < 10 ? '0' + h : h;
+                            const mm = m < 10 ? '0' + m : m;
+                            displayTime = `${hh}.${mm} ${ampm}`;
+                        }
+                    } catch (e) {
+                        displayTime = c.time; // Fallback
+                    }
+
+                    const displayDate = c.date ? String(c.date).split('T')[0] : '';
+
+                    const el = document.createElement('div');
+                    el.style.borderBottom = "1px solid rgba(255,255,255,0.1)";
+                    el.style.padding = "0.75rem 0";
+                    el.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 0.25rem;">
+                            <span style="font-size: 0.8rem; color: #94a3b8;">${displayDate} &nbsp; ${displayTime}</span>
+                        </div>
+                        <p style="color: #e2e8f0; font-size: 0.9rem;">${c.comment}</p>
+                    `;
+                    container.appendChild(el);
+                });
+            }
+        } else {
+            container.innerHTML = `<p class="status-error">${result.message}</p>`;
+        }
+
+    } catch (e) {
+        container.innerHTML = '<p class="status-error">Failed to load history.</p>';
+    }
+}
+
+function closeViewComments() {
+    document.getElementById('view-comments-modal').classList.add('hidden');
 }
 
 let dashboardChart = null;
@@ -395,16 +728,87 @@ function renderStudentList(students) {
         card.className = 'glass-panel stat-card fade-in';
         card.style.textAlign = 'left';
 
+        // Status Logic
+        const status = stu.status || 'Active'; // Default if missing
+        const isSelected = (val) => status.toLowerCase() === val.toLowerCase() ? 'selected' : '';
+
+        // Badge Color
+        let badgeClass = 'status-present'; // Green
+        if (status.toLowerCase() === 'postpond') badgeClass = 'status-absent'; // Red/Orange (using absent style for now)
+        if (status.toLowerCase() === 'reject') badgeClass = 'status-error';
+
         card.innerHTML = `
-            <h3 style="color: var(--primary-color); font-size: 1.1rem;">${stu.name}</h3>
-            <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">NIC: <span style="font-family: monospace; color: white;">${stu.nic}</span></p>
-            <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 1rem;">Intake: ${stu.intake}</p>
-            <button onclick="viewStudentHistory('${stu.nic}')" class="btn btn-primary" style="width: 100%; font-size: 0.875rem;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                <h3 style="color: var(--primary-color); font-size: 1.1rem; margin: 0;">${stu.name}</h3>
+                <span class="status-pill ${badgeClass}" style="font-size: 0.7rem; text-transform: uppercase;">${status}</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 1rem;">
+                <p style="color: #94a3b8; font-size: 0.85rem;">NIC: <span style="font-family: monospace; color: white;">${stu.nic}</span></p>
+                <p style="color: #94a3b8; font-size: 0.85rem;">Intake: <span style="color: white;">${stu.intake}</span></p>
+                <p style="color: #94a3b8; font-size: 0.85rem;">📞: <span style="color: white;">${stu.phone || 'N/A'}</span></p>
+                <p style="color: #94a3b8; font-size: 0.85rem;">📧: <span style="color: white;">${stu.email || 'N/A'}</span></p>
+            </div>
+            
+            <div style="margin-bottom: 1rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem;">Change Status</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <select id="status-select-${stu.nic}" class="search-input" style="padding: 0.25rem; font-size: 0.85rem; height: auto;">
+                        <option value="Active" ${isSelected('Active')}>Active</option>
+                        <option value="Postpond" ${isSelected('Postpond')}>Postpond</option>
+                        <option value="Reject" ${isSelected('Reject')}>Reject</option>
+                    </select>
+                    <button onclick="updateStatus('${stu.nic}')" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">
+                        Save
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="viewStudentHistory('${stu.nic}')" class="btn btn-secondary" style="width: 100%; font-size: 0.875rem; margin-bottom: 0.5rem;">
                 View History
+            </button>
+            <button onclick="viewStudentComments('${stu.nic}')" class="btn btn-secondary" style="width: 100%; font-size: 0.875rem;">
+                View Comments
             </button>
         `;
         container.appendChild(card);
     });
+}
+
+async function updateStatus(nic) {
+    const select = document.getElementById(`status-select-${nic}`);
+    const newStatus = select.value;
+    const btn = select.nextElementSibling;
+
+    // UI Feedback
+    const originalText = btn.textContent;
+    btn.textContent = "...";
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'updateStudentStatus',
+                nic: nic,
+                status: newStatus
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            alert(`Success: ${result.message}`);
+        } else {
+            alert(`Error: ${result.message}`);
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Failed to update status.");
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
 }
 
 // 6. View Student History
@@ -511,11 +915,18 @@ async function generateIntakeReport() {
 
             result.data.forEach(s => {
                 const tr = document.createElement('tr');
-                const isActive = s.status === 'Active';
+
+                let badgeClass = 'status-present'; // Default Green (Active)
+                const lowerStatus = s.status.toLowerCase();
+
+                if (lowerStatus === 'continuous absence') badgeClass = 'status-error'; // Red
+                else if (lowerStatus === 'reject') badgeClass = 'status-error';
+                else if (lowerStatus === 'postpond') badgeClass = 'status-absent'; // Orange
+
                 tr.innerHTML = `
                     <td style="font-family: monospace;">${s.nic}</td>
                     <td>${s.name}</td>
-                    <td><span class="status-pill ${isActive ? 'status-present' : 'status-absent'}">${s.status}</span></td>
+                    <td><span class="status-pill ${badgeClass}">${s.status}</span></td>
                     <td style="text-align: center;">${s.absences}</td>
                 `;
                 tbody.appendChild(tr);
