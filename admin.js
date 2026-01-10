@@ -2,7 +2,7 @@
 // CONFIGURATION
 // ==========================================
 // REPLACE THIS URL WITH YOUR NEW DEPLOYMENT URL
-const API_URL = "https://script.google.com/macros/s/AKfycby84uPp1q3WH0vWnr1mlUEp4jTJsyibpw-6ELDlWHbEWN20dBITPQVDte8zY7T8ViMc/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwco1BhCIzb0IGwb41wsTkVS9bMhttM43gd3Tke6hBQMayLlla0QP-bDnkcgx5f3ufc/exec";
 
 // State
 let currentReportData = []; // Store for CSV export
@@ -257,18 +257,49 @@ function renderReportTable(data) {
         const isPresent = row.status === 'Present';
         if (isPresent) presentCount++;
 
-        // Account Status Badge
-        let accStatus = row.accountStatus || 'Active';
-        let accBadgeClass = 'status-present';
-        if (accStatus.toLowerCase() === 'postpond') accBadgeClass = 'status-absent';
-        if (accStatus.toLowerCase() === 'reject') accBadgeClass = 'status-error';
+        // Format Time: 9.00 AM
+        let displayTime = row.time || '-';
+        if (displayTime !== '-' && displayTime) {
+            try {
+                let dateObj;
+                if (String(displayTime).includes('T') || displayTime instanceof Date) {
+                    dateObj = new Date(displayTime);
+                } else {
+                    // Assume HH:MM:SS or HH:MM
+                    const parts = String(displayTime).split(':');
+                    if (parts.length >= 2) {
+                        dateObj = new Date();
+                        dateObj.setHours(parseInt(parts[0]));
+                        dateObj.setMinutes(parseInt(parts[1]));
+                    }
+                }
+
+                if (dateObj) {
+                    let h = dateObj.getHours();
+                    let m = dateObj.getMinutes();
+                    const ampm = h >= 12 ? 'PM' : 'AM';
+                    h = h % 12;
+                    h = h ? h : 12;
+                    const hh = h; // 9, not 09 per request "9.00"
+                    const mm = m < 10 ? '0' + m : m;
+                    displayTime = `${hh}.${mm} ${ampm}`;
+                }
+            } catch (e) { }
+        }
 
         tr.innerHTML = `
             <td style="font-family: monospace;">${row.nic}</td>
             <td>${row.name}</td>
-            <td><span class="status-pill ${accBadgeClass}" style="font-size: 0.75rem;">${accStatus}</span></td>
+            <td style="font-size: 0.9rem;">${row.phone || '-'}</td>
+            <td style="font-size: 0.9rem;">${row.parentPhone || '-'}</td>
             <td><span class="status-pill ${isPresent ? 'status-present' : 'status-absent'}">${row.status}</span></td>
-            <td>${row.time || '-'}</td>
+            <td>${displayTime}</td>
+            <td id="comment-cell-${row.nic}" style="font-size: 0.85rem; color: #cbd5e1; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${row.lastComment || ''}">${row.lastComment || '-'}</td>
+            <td>
+                <button onclick="openAddComment('${row.nic}', '${row.name}', '${currentReportMeta.classId}', '${row.status}')" class="btn btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">
+                   Add Comment
+                </button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
@@ -432,10 +463,25 @@ async function saveDashStatus(nic) {
 
 // 6. COMMENTS LOGIC
 let currentCommentNic = null;
+let currentCommentPrefix = ""; // Store dynamic prefix
 
-async function openAddComment(nic, name) {
+async function openAddComment(nic, name, className = "", status = "") {
     currentCommentNic = nic;
-    document.getElementById('comment-student-info').textContent = `${name} (${nic})`;
+
+    // Set format: <class name>- "Absent Call"
+    // If not (from Dashboard Inactive), maybe clear or different logic? 
+    // User requested: <class id>- Absent Call - <comment>
+    // className now holds Class ID passed from report.
+
+    if (className) {
+        currentCommentPrefix = `${className} - Absent Call - `;
+        // Show user context
+        document.getElementById('comment-student-info').textContent = `${name} (${nic}) | Class: ${className}`;
+    } else {
+        currentCommentPrefix = ""; // Generic comment
+        document.getElementById('comment-student-info').textContent = `${name} (${nic})`;
+    }
+
     document.getElementById('new-comment-text').value = '';
 
     const historyList = document.getElementById('add-comment-history-list');
@@ -512,11 +558,13 @@ function closeAddComment() {
 }
 
 async function saveCheckComment() {
-    const comment = document.getElementById('new-comment-text').value;
+    let comment = document.getElementById('new-comment-text').value;
     if (!comment) return alert("Please enter a comment.");
 
-    // UI Feedback is tricky without a specific button reference or status div in modal, 
-    // let's use generic Loading or just alert for now.
+    // Prepend Prefix if set
+    if (currentCommentPrefix) {
+        comment = currentCommentPrefix + comment;
+    }
 
     try {
         const response = await fetch(API_URL, {
@@ -532,7 +580,20 @@ async function saveCheckComment() {
         if (result.status === 'success') {
             alert("Comment Saved");
             closeAddComment();
-            loadDashboard(); // Reload to update "Last Comment"
+
+            // UI Hot Update (Report View)
+            const cell = document.getElementById(`comment-cell-${currentCommentNic}`);
+            if (cell) {
+                cell.textContent = comment;
+                cell.title = comment;
+            }
+
+            // Dashboard View Update (if on Dashboard)
+            // Just reloading dashboard is safer but might lose state if we are deep in something.
+            // But usually we are either in Report or Dashboard. 
+            // If in Dashboard, let's reload to be safe or update if we had IDs there too.
+            // For now, loadDashboard() works fine.
+            loadDashboard();
         } else {
             alert("Error: " + result.message);
         }
@@ -748,7 +809,8 @@ function renderStudentList(students) {
                 <p style="color: #94a3b8; font-size: 0.85rem;">NIC: <span style="font-family: monospace; color: white;">${stu.nic}</span></p>
                 <p style="color: #94a3b8; font-size: 0.85rem;">Intake: <span style="color: white;">${stu.intake}</span></p>
                 <p style="color: #94a3b8; font-size: 0.85rem;">📞: <span style="color: white;">${stu.phone || 'N/A'}</span></p>
-                <p style="color: #94a3b8; font-size: 0.85rem;">📧: <span style="color: white;">${stu.email || 'N/A'}</span></p>
+                <p style="color: #94a3b8; font-size: 0.85rem;">�‍👩‍👧‍👦: <span style="color: white;">${stu.parentPhone || 'N/A'}</span></p>
+                <p style="color: #94a3b8; font-size: 0.85rem;">�📧: <span style="color: white;">${stu.email || 'N/A'}</span></p>
             </div>
             
             <div style="margin-bottom: 1rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">

@@ -2,7 +2,7 @@
 // CONFIGURATION
 // ==========================================
 // REPLACE THIS URL WITH YOUR NEW DEPLOYMENT URL
-const API_URL = "https://script.google.com/macros/s/AKfycby84uPp1q3WH0vWnr1mlUEp4jTJsyibpw-6ELDlWHbEWN20dBITPQVDte8zY7T8ViMc/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwco1BhCIzb0IGwb41wsTkVS9bMhttM43gd3Tke6hBQMayLlla0QP-bDnkcgx5f3ufc/exec";
 
 /**
  * Main Logic for Student Portal
