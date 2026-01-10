@@ -2,7 +2,7 @@
 // CONFIGURATION
 // ==========================================
 // REPLACE THIS URL WITH YOUR NEW DEPLOYMENT URL
-const API_URL = "https://script.google.com/macros/s/AKfycbzIWLul3R9lFieZ7AfXgOHhxUyeO_5TNf53HEA9I2-qsJ_gP8BZ8KTvqRkWitAGQ1YI/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby84uPp1q3WH0vWnr1mlUEp4jTJsyibpw-6ELDlWHbEWN20dBITPQVDte8zY7T8ViMc/exec";
 
 // State
 let currentReportData = []; // Store for CSV export
@@ -366,6 +366,7 @@ async function loadDashboard() {
                             <small style="color:#94a3b8;">${s.intake}</small>
                         </td>
                         <td>${s.phone || 'N/A'}</td>
+                        <td>${s.parentPhone || 'N/A'}</td>
                         <td>
                            <div style="display: flex; gap: 0.25rem;">
                                <select id="status-dash-${safeNic}" class="search-input" style="padding: 0.2rem; font-size: 0.8rem; width: auto;">
